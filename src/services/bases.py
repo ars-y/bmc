@@ -1,30 +1,67 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractclassmethod
 from typing import TypeVar, Optional
 
 from pydantic import BaseModel
 
 from src.models.bases import Base
-from src.repositories.bases import SQLAlchemyRepository
+from src.units.base import AbstractBaseUnitOfWork
 
 
-RepoType = TypeVar('RepoType', bound=SQLAlchemyRepository)
 SQLModelType = TypeVar('SQLModelType', bound=Base)
 PyModelType = TypeVar('PyModelType', bound=BaseModel)
+UOWType = TypeVar('UOWType', bound=AbstractBaseUnitOfWork)
 
 
-class StorageBaseService:
+class AbstractBaseService(ABC):
 
-    _repository: type[RepoType]
+    _repository = None
 
-    def __init__(self, repository: type[RepoType]) -> None:
-        self._repository = repository
+    @abstractclassmethod
+    async def get(cls, uow: type[UOWType], pk: int):
+        raise NotImplementedError
 
-    async def get(self, pk: int) -> Optional[SQLModelType]:
-        """Returns an object from the database by ID.."""
-        return await self._repository.get(pk=pk)
-
+    @abstractclassmethod
     async def get_by_field_contains(
-        self,
+        cls,
+        uow: type[UOWType],
+        field: str,
+        values: list
+    ):
+        raise NotImplementedError
+
+    @abstractclassmethod
+    async def get_all(cls, uow: type[UOWType], filters: dict):
+        raise NotImplementedError
+
+    @abstractclassmethod
+    async def get_by_filters(cls, uow: type[UOWType], **filters):
+        raise NotImplementedError
+
+    @abstractclassmethod
+    async def create(cls, uow: type[UOWType], data: dict):
+        raise NotImplementedError
+
+    @abstractclassmethod
+    async def update(cls, uow: type[UOWType], pk: int, data: dict):
+        raise NotImplementedError
+
+    @abstractclassmethod
+    async def delete(cls, uow: type[UOWType], pk: int):
+        raise NotImplementedError
+
+
+class StorageBaseService(AbstractBaseService):
+
+    @classmethod
+    async def get(cls, uow: type[UOWType], pk: int):
+        """Returns an object from the database by ID.."""
+        async with uow:
+            return await uow.__dict__[cls._repository].get(pk)
+
+    @classmethod
+    async def get_by_field_contains(
+        cls,
+        uow: type[UOWType],
         field: str,
         values: list
     ) -> list[SQLModelType]:
@@ -32,34 +69,58 @@ class StorageBaseService:
         Returns a list of objects from the database
         by fieled contains values.
         """
-        return await self._repository.get_by_field_contains(
-            field=field,
-            values=values
-        )
+        async with uow:
+            return await uow.__dict__[cls._repository].get_by_field_contains(
+                field=field,
+                values=values
+            )
 
+    @classmethod
     async def get_all(
-        self,
+        cls,
+        uow: type[UOWType],
         filters: Optional[dict] = None
     ) -> list[SQLModelType]:
         """Returns a list of objects from the database.."""
         filters: dict = filters or {}
-        return await self._repository.get_all(**filters)
+        async with uow:
+            return await uow.__dict__[cls._repository].get_all(**filters)
 
-    async def get_by_filters(self, **filters) -> Optional[SQLModelType]:
+    @classmethod
+    async def get_by_filters(
+        cls,
+        uow: type[UOWType],
+        **filters
+    ) -> Optional[SQLModelType]:
         """Returns an object from the database by filters."""
-        return await self._repository.get_by_filters(**filters)
+        async with uow:
+            return (
+                await uow.__dict__[cls._repository]
+                .get_by_filters(**filters)
+            )
 
-    async def create(self, data: dict) -> SQLModelType:
+    @classmethod
+    async def create(cls, uow: type[UOWType], data: dict) -> SQLModelType:
         """Creates a new object in the database."""
-        return await self._repository.create(data)
+        async with uow:
+            return await uow.__dict__[cls._repository].create(data)
 
-    async def update(self, pk: int, data: dict) -> SQLModelType:
+    @classmethod
+    async def update(
+        cls,
+        uow: type[UOWType],
+        pk: int,
+        data: dict
+    ) -> SQLModelType:
         """Updates an object in the database by ID."""
-        return await self._repository.update(pk, data)
+        async with uow:
+            return await uow.__dict__[cls._repository].update(pk, data)
 
-    async def delete(self, pk: int) -> SQLModelType:
+    @classmethod
+    async def delete(cls, uow: type[UOWType], pk: int) -> SQLModelType:
         """Delete an object from the database by ID.."""
-        return await self._repository.delete(pk=pk)
+        async with uow:
+            return await uow.__dict__[cls._repository].delete(pk=pk)
 
 
 class TokenAbstractBaseService(ABC):

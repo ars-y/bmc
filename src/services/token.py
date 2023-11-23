@@ -60,4 +60,4 @@ class JWTService(TokenAbstractBaseService):
         return generate(data, self._key, self._algorithm)
 
 
-service = JWTService()
+jwt_service = JWTService()

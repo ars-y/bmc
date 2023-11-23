@@ -1,12 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Callable, TypeVar, Optional
+from typing import TypeVar, Optional
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import (
+    delete as sql_delete,
+    select,
+    update as sql_update
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.enums.sql import OrderEnum
-from src.exceptions.db import ObjectAlreadyExists, ObjectNotFound
+from src.exceptions.db import ObjectNotFound
 from src.models.bases import Base
 
 
@@ -86,36 +89,30 @@ class AbstractBaseRepository(ABC):
 
 class SQLAlchemyRepository(AbstractBaseRepository):
 
-    def __init__(
-        self,
-        model: type[SQLModelType],
-        session: Callable[..., AsyncSession]
-    ) -> None:
-        self._model = model
+    _model: type[SQLModelType]
+
+    def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def get(self, pk: int) -> Optional[SQLModelType]:
-        async with self._session() as session:
-            stmt = select(self._model).where(self._model.id == pk)
-            response = await session.execute(stmt)
-            return response.scalar_one_or_none()
+        stmt = select(self._model).where(self._model.id == pk)
+        response = await self._session.execute(stmt)
+        return response.scalar_one_or_none()
 
     async def get_by_filters(self, **filters) -> Optional[SQLModelType]:
-        async with self._session() as session:
-            stmt = select(self._model).filter_by(**filters)
-            response = await session.execute(stmt)
-            return response.scalar_one_or_none()
+        stmt = select(self._model).filter_by(**filters)
+        response = await self._session.execute(stmt)
+        return response.scalar_one_or_none()
 
     async def get_by_field_contains(
         self,
         field: str,
         values: list
     ) -> list[SQLModelType]:
-        async with self._session() as session:
-            stmt = select(self._model)
-            stmt = stmt.where(getattr(self._model, field).in_(values))
-            response = await session.execute(stmt)
-            return response.scalars().all()
+        stmt = select(self._model)
+        stmt = stmt.where(getattr(self._model, field).in_(values))
+        response = await self._session.execute(stmt)
+        return response.scalars().all()
 
     async def get_all(
         self,
@@ -125,62 +122,51 @@ class SQLAlchemyRepository(AbstractBaseRepository):
         order_by_field: Optional[str] = None,
         order: OrderEnum = OrderEnum.ASCENDING
     ) -> list[SQLModelType]:
-        async with self._session() as session:
-            stmt = select(self._model)
-            if filters:
-                stmt = stmt.filter_by(**filters)
+        stmt = select(self._model)
+        if filters:
+            stmt = stmt.filter_by(**filters)
 
-            stmt = stmt.offset(offset).limit(limit)
+        stmt = stmt.offset(offset).limit(limit)
 
-            columns = self._model.__table__.columns
-            if not order_by_field or order_by_field not in columns:
-                order_by_field = self._model.id
-            else:
-                order_by_field = getattr(self._model, order_by_field)
+        columns = self._model.__table__.columns
+        if not order_by_field or order_by_field not in columns:
+            order_by_field = self._model.id
+        else:
+            order_by_field = getattr(self._model, order_by_field)
 
-            if order == OrderEnum.ASCENDING:
-                stmt = stmt.order_by(order_by_field.asc())
-            else:
-                stmt = stmt.order_by(order_by_field.desc())
+        if order == OrderEnum.ASCENDING:
+            stmt = stmt.order_by(order_by_field.asc())
+        else:
+            stmt = stmt.order_by(order_by_field.desc())
 
-            response = await session.execute(stmt)
-            return response.scalars().all()
+        response = await self._session.execute(stmt)
+        return response.scalars().all()
 
     async def create(self, data: dict) -> SQLModelType:
-        async with self._session() as session:
-            db_obj = self._model(**data)
-            try:
-                session.add(db_obj)
-                await session.commit()
-            except IntegrityError:
-                await session.rollback()
-                raise ObjectAlreadyExists()
-
-            await session.refresh(db_obj)
-            return db_obj
+        db_obj = self._model(**data)
+        self._session.add(db_obj)
+        return db_obj
 
     async def update(self, pk: int, data: dict) -> SQLModelType:
-        async with self._session() as session:
-            obj: Optional[SQLModelType] = await self.get(pk)
+        stmt = sql_update(self._model)
+        stmt = stmt.where(self._model.id == pk)
+        stmt = stmt.values(**data).returning(self._model)
+        response = await self._session.execute(stmt)
+        obj: Optional[SQLModelType] = response.scalar_one_or_none()
 
-            if not obj:
-                raise ObjectNotFound()
+        if not obj:
+            raise ObjectNotFound()
 
-            for field in data:
-                setattr(obj, field, data.get(field))
-
-            session.add(obj)
-            await session.commit()
-            await session.refresh(obj)
-            return obj
+        return obj
 
     async def delete(self, pk: int) -> SQLModelType:
-        async with self._session() as session:
-            obj: Optional[SQLModelType] = await self.get(pk)
+        stmt = sql_delete(self._model)
+        stmt = stmt.where(self._model.id == pk)
+        stmt = stmt.returning(self._model)
+        response = await self._session.execute(stmt)
+        obj: Optional[SQLModelType] = response.scalar_one_or_none()
 
-            if not obj:
-                raise ObjectNotFound()
+        if not obj:
+            raise ObjectNotFound()
 
-            await session.delete(obj)
-            await session.commit()
-            return obj
+        return obj

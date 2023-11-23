@@ -1,14 +1,15 @@
 from src.models import Employee, Meeting
-from src.repositories import meeting
-from src.services.bases import StorageBaseService
+from src.services.bases import StorageBaseService, UOWType
 
 
 class MeetingService(StorageBaseService):
 
-    _repository: meeting.MeetingRepository
+    _repository = 'meeting_repository'
 
+    @classmethod
     async def create_meeting_with_employees(
-        self,
+        cls,
+        uow: type[UOWType],
         data: dict,
         employees: list[Employee]
     ) -> Meeting:
@@ -19,13 +20,16 @@ class MeetingService(StorageBaseService):
             - `data`: dict with creation data;
             - `employees`: list with employees to add.
         """
-        return await self._repository.create_meeting_with_employees(
-            data,
-            employees
-        )
+        async with uow:
+            return (
+                await uow.__dict__[cls._repository]
+                .create_meeting_with_employees(data, employees)
+            )
 
+    @classmethod
     async def update_meeting_with_employees(
-        self,
+        cls,
+        uow: type[UOWType],
         pk: int,
         data: dict,
         employees: list[Employee]
@@ -38,11 +42,8 @@ class MeetingService(StorageBaseService):
             - `data`: dict with data to update;
             - `employees`: list of employees to replace.
         """
-        return await self._repository.update_meeting_with_employees(
-            pk,
-            data,
-            employees
-        )
-
-
-service = MeetingService(meeting.repository)
+        async with uow:
+            return (
+                await uow.__dict__[cls._repository]
+                .update_meeting_with_employees(pk, data, employees)
+            )

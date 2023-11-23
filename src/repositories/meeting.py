@@ -1,12 +1,13 @@
-from src.db.sessions import get_session
+from sqlalchemy import insert, select
+
 from src.exceptions.db import ObjectNotFound
-from src.models import Employee, Meeting
+from src.models import Employee, Meeting, Employee_Meeting
 from src.repositories.bases import SQLAlchemyRepository
 
 
 class MeetingRepository(SQLAlchemyRepository):
 
-    _model: Meeting
+    _model = Meeting
 
     async def create_meeting_with_employees(
         self,
@@ -14,20 +15,24 @@ class MeetingRepository(SQLAlchemyRepository):
         employees: list[Employee]
     ) -> Meeting:
         """Creating meeting with adding employees from list."""
-        async with self._session() as session:
-            try:
-                meeting: Meeting = self._model(**data)
-                for employee in employees:
-                    meeting.employees.append(employee)
+        meeting: Meeting = self._model(**data)
+        stmt = insert(self._model).values(**data).returning(self._model)
+        response = await self._session.execute(stmt)
+        meeting: Meeting = response.scalar_one_or_none()
 
-                session.add(meeting)
-                await session.commit()
-            except Exception as exc:
-                await session.rollback()
-                raise Exception(exc)
+        if not meeting:
+            raise ObjectNotFound()
 
-            await session.refresh(meeting)
-            return meeting
+        for employee in employees:
+            data: dict = {
+                'meeting_id': meeting.id,
+                'employee_id': employee.id
+            }
+            self._session.add(Employee_Meeting(**data))
+
+        self._session.add(meeting)
+
+        return meeting
 
     async def update_meeting_with_employees(
         self,
@@ -36,20 +41,24 @@ class MeetingRepository(SQLAlchemyRepository):
         employees: list[Employee]
     ) -> Meeting:
         """Updating meeting with replace employees list."""
-        async with self._session() as session:
-            meeting: Meeting = await self.get(pk)
+        stmt = select(self._model).where(self._model.id == pk)
+        response = await self._session.execute(stmt)
+        meeting: Meeting = response.scalar_one_or_none()
 
-            if not meeting:
-                raise ObjectNotFound()
+        if not meeting:
+            raise ObjectNotFound()
 
-            meeting.employees.clear()
-            await session.commit()
+        meeting.employees.clear()
 
-            meeting: Meeting = await self.update(pk, data)
-            meeting.employees = employees
-            await session.commit()
+        meeting: Meeting = await self.update(pk, data)
 
-            return meeting
+        if not meeting:
+            raise ObjectNotFound()
 
+        for employee in employees:
+            stmt = select(Employee).where(Employee.id == employee.id)
+            response = await self._session.execute(stmt)
+            employee: Employee = response.scalar_one_or_none()
+            meeting.employees.append(employee)
 
-repository = MeetingRepository(Meeting, get_session)
+        return meeting
