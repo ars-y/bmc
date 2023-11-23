@@ -2,9 +2,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, relationship
 
-from src.mixins.sets import GenericUDORMixin
+from src.api.v1.schemas.response.employee import EmployeeResponseSchema
 from src.models.bases import Base
-from src.schemas.response.employee import EmployeeResponseSchema
+from src.models.mixins.sets import GenericUDORMixin
 
 if TYPE_CHECKING:
     from src.models.meeting import Meeting

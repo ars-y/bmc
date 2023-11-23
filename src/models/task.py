@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.api.v1.schemas.response.task import TaskResponseSchema
 from src.enums.status import STATUS_STATES
-from src.mixins.common import GenericFieldsMixin
 from src.models.bases import Base
-from src.schemas.response.task import TaskResponseSchema
+from src.models.mixins.common import GenericFieldsMixin
 
 if TYPE_CHECKING:
     from src.models.employee import Employee

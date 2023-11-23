@@ -2,11 +2,11 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, relationship
 
-from src.mixins.common import GenericFieldsMixin
-from src.mixins.organizations import RefOrganizationMixin
-from src.mixins.users import RefUserMixin
+from src.api.v1.schemas.response.department import DepartmentResponseSchema
 from src.models.bases import Base
-from src.schemas.response.department import DepartmentResponseSchema
+from src.models.mixins.common import GenericFieldsMixin
+from src.models.mixins.organizations import RefOrganizationMixin
+from src.models.mixins.users import RefUserMixin
 
 if TYPE_CHECKING:
     from src.models.employee import Employee

@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.api.v1.schemas.response.meeting import MeetingResponseSchema
 from src.models.bases import Base
-from src.schemas.response.meeting import MeetingResponseSchema
 
 if TYPE_CHECKING:
     from src.models.employee import Employee

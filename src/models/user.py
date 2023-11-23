@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.mixins.roles import RefRoleMixin
+from src.api.v1.schemas.response.user import UserResponseSchema
 from src.models.bases import Base
-from src.schemas.response.user import UserResponseSchema
+from src.models.mixins.roles import RefRoleMixin
 
 
 class User(RefRoleMixin, Base):

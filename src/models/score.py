@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.mixins.task import RefTaskMixin
+from src.api.v1.schemas.response.score import ScoreResponseSchema
 from src.models.bases import Base
-from src.schemas.response.score import ScoreResponseSchema
+from src.models.mixins.task import RefTaskMixin
 
 if TYPE_CHECKING:
     from src.models.task import Task

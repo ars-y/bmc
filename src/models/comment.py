@@ -1,9 +1,9 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.mixins.task import RefTaskMixin
+from src.api.v1.schemas.response.comment import CommentResponseSchema
 from src.models.bases import Base
-from src.schemas.response.comment import CommentResponseSchema
+from src.models.mixins.task import RefTaskMixin
 
 
 class Comment(RefTaskMixin, Base):
