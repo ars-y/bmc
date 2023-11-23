@@ -1,5 +1,6 @@
 from email.message import EmailMessage
 
+from src.core.constants import INVITE_URL_PREFIX
 from src.core.settings.base import settings
 from src.templates.invite import get_invite_content_template
 
@@ -10,7 +11,7 @@ def get_email_invite_template(data: dict) -> EmailMessage:
     email_from: str = data.get('invited_by').get('email')
     email_to: str = data.get('invitee').get('email')
 
-    url: str = f'{settings.ADDRESS_URL}auth/join/invitation?code={code}'
+    url: str = f'{settings.ADDRESS_URL}{INVITE_URL_PREFIX}?code={code}'
     content: str = get_invite_content_template(org_name, url)
 
     email_msg = EmailMessage()
