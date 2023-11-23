@@ -1,4 +1,6 @@
-from typing import Optional
+from typing import Annotated, Optional
+
+from fastapi import Depends
 
 from src.enums.sql import OrderEnum
 
@@ -24,3 +26,6 @@ async def query_params_get_list(
         'order': sort,
         'order_by_field': sort_by
     }
+
+
+QueryParamDeps: type[dict] = Annotated[dict, Depends(query_params_get_list)]
