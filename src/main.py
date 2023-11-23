@@ -3,9 +3,9 @@ from typing import Generator
 
 from fastapi import FastAPI
 
+from src.api.v1.routers import api_v1_router
 from src.cache.redis import RedisClient
 from src.core.constants import TITLE_APP, DESCRIPTION_APP
-from src.routers import app_routers
 
 
 @asynccontextmanager
@@ -23,8 +23,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    for router in app_routers:
-        app.include_router(router)
+    app.include_router(api_v1_router)
 
     return app
 
