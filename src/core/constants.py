@@ -57,3 +57,9 @@ INVITE_EXPIRE_SECONDS: int = 60*60*24*7
 SUPERUSER_USERNAME: str = str(os.getenv('SUPERUSER_USERNAME', 'admin'))
 
 SUPERUSER_PASSWORD: str = str(os.getenv('SUPERUSER_PASSWORD', 'Qwerty_123'))
+
+###############################################################################
+# INVITE DATA
+###############################################################################
+
+INVITE_URL_PREFIX: str = 'api/v1/auth/signup'
